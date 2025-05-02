@@ -5,10 +5,10 @@
   *=== Motor Size, Speed and Steps Info ===*
         Minimum speed = 3024
         This gives 30 microsec per step
-        and 50 millisec per rotation
+            and 50 millisec per rotation
         Maximum speed = 65535
         This gives 655 microsec per step
-        and 1 sec per rotation
+            and 1 sec per rotation
         Wheel have diameter of ~8 cm and circonfrence of ~25 cm
         1 Rotation ~= 1600 Steps
         1 cm ~= 64 steps
@@ -131,4 +131,10 @@ void dance(void){
   straigth(25);
   turn_right(90);
   twist(180);
+  strave_left(30,10);
+  for(int i = 0; i < 5; i++){
+    strave_right(-60,10);
+    strave_left(60,10);
+  }
+  strave_right(-30,10);
 }
