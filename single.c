@@ -6,8 +6,7 @@
 #include <math.h>
 #include "movement_lib.h"
 
-int vl53l0xExampleSingle(void) {
-	// Sensor Check
+int vl53l0xSensorCheck() {
 	int i;
 	uint8_t addr = 0x29;
 	i = tofPing(IIC0, addr);
@@ -17,7 +16,11 @@ int vl53l0xExampleSingle(void) {
 		return 1;
 	}
 	printf("Succes\n");
+	return 0;
+};
 
+int vl53l0xExampleSingle(void) {
+	if (vl53l0xSensorCheck()) return 1;
 	// Create a sensor struct
 	vl53x sensor;
 
@@ -34,9 +37,6 @@ int vl53l0xExampleSingle(void) {
 	printf("Revision ID - %d\n", revision);
 	fflush(NULL); //Get some output even is distance readings hang
 	
-	
-	
-
 	int32_t iDistance;
 	int32_t prevDistance;
 
