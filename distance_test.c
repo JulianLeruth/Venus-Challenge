@@ -19,7 +19,7 @@ int vl53l0xSensorCheck(void) {
 	return 0;
 };
 
-int vl53l0xExampleSingle(void) {
+int vl53l0xExample(void) {
 	if (vl53l0xSensorCheck()) return 1;
 	// Create a sensor struct
 	vl53x sensor;
