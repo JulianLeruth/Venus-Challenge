@@ -1,10 +1,8 @@
 #include <libpynq.h>
+#include <stdio.h>
 #include <iic.h>
 #include "vl53l0x.h"
-#include <stdio.h>
-
-extern int vl53l0xExampleSingle();
-extern int vl53l0xExampleDual();
+#include "distance_sensor.h"
 
 int main(void) {
   	pynq_init();
@@ -15,7 +13,7 @@ int main(void) {
 	switchbox_set_pin(IO_AR_SDA, SWB_IIC0_SDA);
 	iic_init(IIC0);
 
-	vl53l0xExampleSingle();
+	vl53l0xExample();
 	
 	iic_destroy(IIC0);
 	pynq_destroy();
