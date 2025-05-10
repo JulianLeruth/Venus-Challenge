@@ -6,10 +6,10 @@
 #include "vl53l0x.h"
 /*
   *=== Motor Size, Speed and Steps Info ===*
-        Minimum speed = 3024
+        Maximum speed = 3024
         This gives 30 microsec per step
             and 50 millisec per rotation
-        Maximum speed = 65535
+        Minimum speed = 65535
         This gives 655 microsec per step
             and 1 sec per rotation
         Wheel have diameter of ~8 cm and circonfrence of ~25 cm
@@ -26,8 +26,8 @@
 #define PI 3.14159265358979323846
 #define STRAIGTH_STEPS_IN_CM 64     // Max number of steps ~= 32767
 #define TURN_STEPS_IN_HALF_CM 32    // Max number of steps ~= 32767
-#define MOVEMENT_SPEED 15000        // Defined on trial and error
-#define ROTATION_SPEED 15000        // Defined on trial and error
+#define MOVEMENT_SPEED 15000
+#define ROTATION_SPEED 15000
 #define ROBOT_WIDTH 12.3
 
 #define NUMBER_OF_MEASUREMENT_FOR_TURNING 70
@@ -190,12 +190,12 @@ void dance(void){
 
 // Advanced Movement and detection functions
 int sizeDetection(vl53x sensor) {
-  int32_t iDistance;
+	int32_t iDistance;
 	int32_t prevDistance;
 	int number_of_measurements = 2;
 	
-  iDistance = tofReadDistance(&sensor);
-  do {
+	iDistance = tofReadDistance(&sensor);
+	do {
 		prevDistance = iDistance;
 		iDistance = tofReadDistance(&sensor);
 		printf("Left: Distance = %dmm\n", iDistance);
@@ -227,29 +227,29 @@ int sizeDetection(vl53x sensor) {
 	stepper_disable();
 	stepper_reset();
 	stepper_enable();
-
+	
 	printf("Other Corner Found!\nDistance = %dmm\nNumber of Measurements = %d\n\n", iDistance, number_of_measurements);
-
+	
 	if (number_of_measurements >= 11 && number_of_measurements <= 13) return 1;
 	else if (number_of_measurements >= 14 && number_of_measurements <= 18) return 2;
 	else if (number_of_measurements > 18) return 3;
-	
-  return 0;
+
+ 	return 0;
 }
 
 void objectDectection(vl53x sensor) {
-  int32_t iDistance;
-  int32_t iDistanceArr[NUMBER_OF_MEASUREMENT_FOR_TURNING+1];
-
+	int32_t iDistance;
+	int32_t iDistanceArr[NUMBER_OF_MEASUREMENT_FOR_TURNING+1];
+	
 	twist(-360);
 	for(int i = 0; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) {
 		iDistanceArr[i] =  tofReadDistance(&sensor);
 		printf("1: Distance = %dmm\n", iDistanceArr[i]);
 	}
 	waitTillDone();
-
+	
 	int lowest_distance_index = lowestValueIndex(iDistanceArr);
-
+	
 	printf("lowest distance index: %d\nlowest distance: %d\nArr: [%d", lowest_distance_index, iDistanceArr[lowest_distance_index], iDistanceArr[0]);
 	for(int i = 1; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) printf(", %d", iDistanceArr[i]);
 	printf("]\n");
