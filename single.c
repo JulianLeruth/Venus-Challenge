@@ -1,9 +1,9 @@
 #include <libpynq.h>
+#include <stepper.h>
+#include <stdio.h>
+#include <math.h>
 #include <iic.h>
 #include "vl53l0x.h"
-#include <stdio.h>
-#include <stepper.h>
-#include <math.h>
 #include "movement_lib.h"
 
 int vl53l0xSensorCheck(void) {
