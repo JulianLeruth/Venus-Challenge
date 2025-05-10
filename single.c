@@ -6,7 +6,7 @@
 #include <math.h>
 #include "movement_lib.h"
 
-int vl53l0xSensorCheck() {
+int vl53l0xSensorCheck(void) {
 	int i;
 	uint8_t addr = 0x29;
 	i = tofPing(IIC0, addr);
