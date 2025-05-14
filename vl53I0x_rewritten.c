@@ -36,13 +36,13 @@ typedef enum vcselperiodtype { VcselPeriodPreRange, VcselPeriodFinalRange } vcse
 static int setVcselPulsePeriod(vl53x *ptr_s, vcselPeriodType type, uint8_t period_pclks);
 
 typedef struct tagSequenceStepTimeouts {
-  uint16_t pre_range_vcsel_period_pclks, final_range_vcsel_period_pclks;
+    uint16_t pre_range_vcsel_period_pclks, final_range_vcsel_period_pclks;
 
-  uint16_t msrc_dss_tcc_mclks, pre_range_mclks, final_range_mclks;
-  uint32_t msrc_dss_tcc_us,    pre_range_us,    final_range_us;
+    uint16_t msrc_dss_tcc_mclks, pre_range_mclks, final_range_mclks;
+    uint32_t msrc_dss_tcc_us,    pre_range_us,    final_range_us;
 } SequenceStepTimeouts;
 
-/* VL53L0X internal registers */
+/* ======================= VL53L0X internal registers ======================= */
 #define VL53L0X_REG_IDENTIFICATION_MODEL_ID	                0xc0
 #define VL53L0X_EXPECTED_MODEL_ID                           0xEE
 #define VL53L0X_REG_IDENTIFICATION_REVISION_ID              0xc2
@@ -88,6 +88,7 @@ int tofSetAddress(iic_index_t iic, uint8_t addr, uint8_t newAddr) {
 int tofPing(iic_index_t iic, uint8_t addr) {
     uint8_t model;
     iic_read_register(iic, addr, VL53L0X_REG_IDENTIFICATION_MODEL_ID, &model, 1);
+
     return (model != VL53L0X_EXPECTED_MODEL_ID);
 } /* tofPing() */
 
@@ -95,9 +96,9 @@ int tofPing(iic_index_t iic, uint8_t addr) {
 int tofInit(vl53x *ptr_s, iic_index_t iic, uint8_t addr, int bLongRange) {
     ptr_s->iic_index = iic;
     ptr_s->baseAddr = addr;
-    return initSensor(ptr_s, bLongRange); // finally, initialize the magic numbers in the sensor
-} /* tofInit() */
 
+    return initSensor(ptr_s, bLongRange);
+} /* tofInit() */
 
 
 // ======================== Read and Write Fucntions ======================== //
@@ -113,6 +114,7 @@ static unsigned short readReg16(vl53x *ptr_s, uint8_t ucAddr) {
 static uint8_t readReg(vl53x *ptr_s, uint8_t ucAddr) {
     uint8_t ucTemp;
     iic_read_register(ptr_s->iic_index, ptr_s->baseAddr, ucAddr, &ucTemp, 1);
+
 	return ucTemp;
 } /* readReg() */
 
@@ -123,7 +125,7 @@ static void readMulti(vl53x *ptr_s, uint8_t ucAddr, uint8_t *pBuf, int iCount) {
 
 
 
-/* Write a 16-bit value to a register */
+/* Write a pair of registers as a 16-bit value */
 static void writeReg16(vl53x *ptr_s, uint8_t ucAddr, unsigned short usValue) {
     uint8_t pBuf[2];
     
@@ -133,12 +135,12 @@ static void writeReg16(vl53x *ptr_s, uint8_t ucAddr, unsigned short usValue) {
     iic_write_register(ptr_s->iic_index, ptr_s->baseAddr, ucAddr, pBuf, 2);
 } /* writeReg16() */
 
-/* Write a single register/value pair */
+/* Write a single register value to I2C device */
 static void writeReg(vl53x *ptr_s, uint8_t ucAddr, uint8_t ucValue) {
     iic_write_register(ptr_s->iic_index, ptr_s->baseAddr, ucAddr, &ucValue, 1);
 } /* writeReg() */
 
-/* Writes multiple registers from I2C device */
+/* Writes multiple registers to I2C device */
 static void writeMulti(vl53x *ptr_s, uint8_t ucAddr, uint8_t *pBuf, int iCount) {
     iic_write_register(ptr_s->iic_index, ptr_s->baseAddr, ucAddr, pBuf, iCount);
 } /* writeMulti() */
@@ -196,6 +198,7 @@ int getSpadInfo(vl53x *ptr_s, uint8_t *pCount, uint8_t *pTypeIsAperture) {
     }
     if (iTimeout == VL53L0X_SPAD_MAX_TIMEOUT) {
         fprintf(stderr, "Timeout while waiting for SPAD info\n");
+        printf("Timeout while waiting for SPAD info\n");
         return 0;
     }
     writeReg(ptr_s, 0x83,0x01);
@@ -219,14 +222,14 @@ static uint16_t decodeTimeout(uint16_t reg_val) {
 
 /* Convert sequence step timeout from MCLKs to microseconds with given VCSEL period in PCLKs, based on VL53L0X_calc_timeout_us() */
 static uint32_t timeoutMclksToMicroseconds(uint16_t timeout_period_mclks, uint8_t vcsel_period_pclks) {
-  uint32_t macro_period_ns = calcMacroPeriod(vcsel_period_pclks);
-  return ((timeout_period_mclks * macro_period_ns) + (macro_period_ns / 2)) / 1000;
+    uint32_t macro_period_ns = calcMacroPeriod(vcsel_period_pclks);
+    return ((timeout_period_mclks * macro_period_ns) + (macro_period_ns / 2)) / 1000;
 } /* timeoutMclksToMicroseconds() */
 
 /* Convert sequence step timeout from microseconds to MCLKs with given VCSEL period in PCLKs, based on VL53L0X_calc_timeout_mclks() */
 static uint32_t timeoutMicrosecondsToMclks(uint32_t timeout_period_us, uint8_t vcsel_period_pclks) {
-  uint32_t macro_period_ns = calcMacroPeriod(vcsel_period_pclks);
-  return (((timeout_period_us * 1000) + (macro_period_ns / 2)) / macro_period_ns);
+    uint32_t macro_period_ns = calcMacroPeriod(vcsel_period_pclks);
+    return (((timeout_period_us * 1000) + (macro_period_ns / 2)) / macro_period_ns);
 } /* timeoutMicrosecondsToMclks() */
 
 /*  Encode sequence step timeout register value from timeout in MCLKs, based on VL53L0X_encode_timeout()
@@ -277,8 +280,8 @@ static void getSequenceStepTimeouts(vl53x *ptr_s, uint8_t enables, SequenceStepT
 // given period type (pre-range or final range) to the given value in PCLKs.
 // Longer periods seem to increase the potential range of the sensor.
 // Valid values are (even numbers only):
-//  pre:  12 to 18 (initialized default: 14)
-//  final: 8 to 14 (initialized default: 10)
+//  - pre:  12 to 18 (initialized default: 14)
+//  - final: 8 to 14 (initialized default: 10)
 // based on VL53L0X_set_vcsel_pulse_period()
 static int setVcselPulsePeriod(vl53x *ptr_s, vcselPeriodType type, uint8_t period_pclks) {
     uint8_t vcsel_period_reg = encodeVcselPeriod(period_pclks);
@@ -591,7 +594,7 @@ int initSensor(vl53x *ptr_s, int bLongRangeMode) {
     writeReg(ptr_s, VL53L0X_SYSTEM_SEQUENCE_CONFIG, 0xFF);
     getSpadInfo(ptr_s, &spad_count, &spad_type_is_aperture);
     readMulti(ptr_s, VL53L0X_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, ref_spad_map, 6);
-    //printf("initial spad map: %02x,%02x,%02x,%02x,%02x,%02x\n", ref_spad_map[0], ref_spad_map[1], ref_spad_map[2], ref_spad_map[3], ref_spad_map[4], ref_spad_map[5]);
+    printf("initial spad map: %02x,%02x,%02x,%02x,%02x,%02x\n", ref_spad_map[0], ref_spad_map[1], ref_spad_map[2], ref_spad_map[3], ref_spad_map[4], ref_spad_map[5]);
     writeRegList(ptr_s, ucSPAD);
     ucFirstSPAD = (spad_type_is_aperture) ? 12: 0;
     ucSPADsEnabled = 0;
@@ -601,7 +604,7 @@ int initSensor(vl53x *ptr_s, int bLongRangeMode) {
         else if (ref_spad_map[i>>3] & (1<< (i & 7))) ucSPADsEnabled++;
     } // for i
     writeMulti(ptr_s, VL53L0X_GLOBAL_CONFIG_SPAD_ENABLES_REF_0, ref_spad_map, 6);
-    //printf("final spad map: %02x,%02x,%02x,%02x,%02x,%02x\n", ref_spad_map[0], ref_spad_map[1], ref_spad_map[2], ref_spad_map[3], ref_spad_map[4], ref_spad_map[5]);
+    printf("final spad map: %02x,%02x,%02x,%02x,%02x,%02x\n", ref_spad_map[0], ref_spad_map[1], ref_spad_map[2], ref_spad_map[3], ref_spad_map[4], ref_spad_map[5]);
 
     // load default tuning settings
     writeRegList(ptr_s, ucDefTuning); // long list of magic numbers
@@ -648,7 +651,7 @@ uint16_t readRangeContinuousMillimeters(vl53x *ptr_s) {
     writeReg(ptr_s, VL53L0X_SYSTEM_INTERRUPT_CLEAR, 0x01);
 
     return range;
-}
+} /* readRangeContinuousMillimeters() */
 
 /* Read the current distance in mm */
 uint32_t tofReadDistance(vl53x *sensor) {
@@ -664,8 +667,7 @@ uint32_t tofReadDistance(vl53x *sensor) {
 
     writeReg(sensor, VL53L0X_SYSRANGE_START, 0x01);
 
-    // "Wait until start bit has been cleared"
-    iTimeout = 0;
+    iTimeout = 0; // "Wait until start bit has been cleared"
     while (readReg(sensor, VL53L0X_SYSRANGE_START) & 0x01) {
         iTimeout++;
         sleep_msec(50);
@@ -693,4 +695,3 @@ int tofGetModel(vl53x *sensor, uint8_t *model, uint8_t *revision) {
 	return 0;
 
 } /* tofGetModel() */
-
