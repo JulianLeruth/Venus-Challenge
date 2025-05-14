@@ -571,7 +571,7 @@ int performSingleRefCalibration(vl53x *ptr_s, uint8_t vhv_init_byte) {
     return 1;
 } /* performSingleRefCalibration() */
 
-/* Initialize the vl53l0x */
+/* Initialize the vl53l0x sensor */
 int initSensor(vl53x *ptr_s, int bLongRangeMode) {
     uint8_t spad_count=0, spad_type_is_aperture=0, ref_spad_map[6];
     uint8_t ucFirstSPAD, ucSPADsEnabled;
@@ -630,6 +630,7 @@ int initSensor(vl53x *ptr_s, int bLongRangeMode) {
     return 0;
 }
 
+/* Description for the function! */
 uint16_t readRangeContinuousMillimeters(vl53x *ptr_s) {
     int iTimeout = 0;
     uint16_t range;
@@ -674,7 +675,7 @@ uint32_t tofReadDistance(vl53x *sensor) {
     return readRangeContinuousMillimeters(sensor);
 } /* tofReadDistance() */
 
-/*  */
+/* Returns informations about the sensor */
 int tofGetModel(vl53x *sensor, uint8_t *model, uint8_t *revision) {
     uint8_t ucTemp[2];
     int i;
