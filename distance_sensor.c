@@ -6,27 +6,22 @@
 #include "vl53l0x.h"
 #include "movement_lib.h"
 
-int vl53l0xSensorCheck(void) {
-	int i;
-	uint8_t addr = 0x29;
-	i = tofPing(IIC0, addr);
+int vl53l0xExample(void) {
+    int sensor_ping;
+    uint8_t addr = 0x29;
+	sensor_ping = tofPing(IIC0, addr);
 	printf("Sensor Ping: ");
-	if(i != 0) {
+	if(sensor_ping != 0) {
 		printf("Fail\n");
 		return 1;
 	}
 	printf("Succes\n");
-	return 0;
-};
-
-int vl53l0xExample(void) {
-	if (vl53l0xSensorCheck()) return 1;
 	// Create a sensor struct
 	vl53x sensor;
 
 	// Initialize the sensor
-	i = tofInit(&sensor, IIC0, addr, 0); // set default range mode (up to 800mm)
-	if (i != 0) {
+	sensor_ping = tofInit(&sensor, IIC0, addr, 0); // set default range mode (up to 800mm)
+	if (sensor_ping != 0) {
 		return -1; // problem - quit
 	}
 	uint8_t model, revision;
@@ -39,21 +34,19 @@ int vl53l0xExample(void) {
 	
 	int32_t iDistance;
 	int32_t prevDistance;
-
+    
 	stepper_init();
-	stepper_reset();
-	stepper_set_speed(15000*2, 15000*2);
+	stepper_reset();	
 	stepper_enable();
-	
+
 	objectDetection(sensor);
 
 	iDistance = tofReadDistance(&sensor);
-	do { // read values 20 times a second
+	do {
 		prevDistance = iDistance;
 		iDistance = tofReadDistance(&sensor);
 		printf("Distance = %dmm\n", iDistance);
 		stepper_steps(64, 64);
-		// sleep_msec(100);
 	} while(iDistance > 200 || prevDistance > 200);
 
 	int size = sizeDetection(sensor);
@@ -63,9 +56,7 @@ int vl53l0xExample(void) {
 	else if (size == 3) printf("Mountain detected!\n");
 	else if (size == 0) printf("Error no size detected\n");
 
-	waitTillDone();
 	stepper_disable();
 	stepper_destroy();
-	
 	return EXIT_SUCCESS;
 }
