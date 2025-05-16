@@ -24,11 +24,14 @@
 
 #define PI 3.14159265358979323846
 #define ROBOT_WIDTH 12.3
-#define STRAIGTH_STEPS_IN_CM 64     // Max number of steps ~= 32767
-#define NUMBER_OF_MEASUREMENT_FOR_TURNING 70
+#define STRAIGTH_STEPS_IN_CM 64                     // Max number of steps ~= 32767
+#define NUMBER_OF_MEASUREMENT_FOR_TURNING 180
+#define NUMBER_OF_DIST_MEASUREMENT_PER_SECOND 20
 
-#define MOVEMENT_SPEED 15000        // Defined on trial and error
-#define ROTATION_SPEED 15000        // Defined on trial and error
+#define SMALL_BLOCK_MIN_NUM_MEASUREMENTS 5          // The minimum number of measurements it should take for the robot to detect a small block.
+#define SMALL_BLOCK_MAX_NUM_MEASUREMENTS 15         // The maximum number of measurements it can take for the robot to detect a small block and the minimum for the robot to detect a big block.
+#define BIG_BLOCK_MAX_NUM_MEASUREMENTS 25           // The maximum number of measurements it can take for the robot to detect a big block.
+
 
 // ===================== Basis Value Functions ====================== //
 /* The 'sizeOfArray' function measures the given array and returns the size. */
@@ -90,18 +93,18 @@ int check_if_done(void){
 
 // ==================== Basic Movement Funtions ===================== //
 /* The 'straight' function makes the robot go straight for a given amount of distance and a given speed. */
-void straigth(int dist /* Defined in cm */){
+void straigth(int dist /* Defined in cm */, uint16_t speed){
     stepper_enable();
-    stepper_set_speed(MOVEMENT_SPEED, MOVEMENT_SPEED);
+    stepper_set_speed(speed, speed);
 
     stepper_steps(STRAIGTH_STEPS_IN_CM*dist, STRAIGTH_STEPS_IN_CM*dist);
 }
 
 /* The 'turnRight' function makes the robot make a sharp turn to the right for a given amount of degrees and a given speed. */
-void turnRight(int angle /* Defined in degrees */){
+void turnRight(int angle /* Defined in degrees */, uint16_t speed){
     float number_of_steps = (ROBOT_WIDTH*2*PI*angle*STRAIGTH_STEPS_IN_CM)/360;
     stepper_enable();
-    stepper_set_speed(ROTATION_SPEED, ROTATION_SPEED);
+    stepper_set_speed(speed, speed);
 
     printf("Float: %.1f, Int: %d", number_of_steps, (int)(number_of_steps));
 
@@ -109,29 +112,29 @@ void turnRight(int angle /* Defined in degrees */){
 }
 
 /* The 'turnLeft' function makes the robot make a sharp turn to the left for a given amount of degrees and a given speed. */
-void turnLeft(int angle /* Defined in degrees */){
+void turnLeft(int angle /* Defined in degrees */, uint16_t speed){
     float number_of_steps = (ROBOT_WIDTH*2*PI*angle*STRAIGTH_STEPS_IN_CM)/360;
     stepper_enable();
-    stepper_set_speed(ROTATION_SPEED, ROTATION_SPEED);
+    stepper_set_speed(speed, speed);
 
     stepper_steps((int)(number_of_steps), 0);
 }
 
 /* The 'twist' function makes the robot turn around it's own axes for a given amount of degrees and a given speed. */
-void twist(int angle /* Defined in degrees */){
+void twist(int angle /* Defined in degrees */, uint16_t speed){
     float number_of_steps = (ROBOT_WIDTH*PI*angle*STRAIGTH_STEPS_IN_CM)/360;
 
     stepper_enable();
-    stepper_set_speed(ROTATION_SPEED, ROTATION_SPEED);
+    stepper_set_speed(speed, speed);
 
     stepper_steps(-(int)(number_of_steps), (int)(number_of_steps));
 }
 
 /* The 'straveRight' function makes the robot make a wide turn to the right for a given amount of degrees and a given speed. */
-void straveRight(int angle, int dist /* Defined in degrees */){
+void straveRight(int angle, int dist /* Defined in degrees */, uint16_t speed){
     float number_of_steps_left = ((ROBOT_WIDTH + dist)*2*PI*angle*STRAIGTH_STEPS_IN_CM)/360;
     float number_of_steps_right = (dist*2*PI*angle*STRAIGTH_STEPS_IN_CM)/360;
-    float rotation_speed_left = ROTATION_SPEED;
+    float rotation_speed_left = speed;
     float rotation_speed_right = (ROBOT_WIDTH + dist)/dist*rotation_speed_left;
 
     stepper_enable();
@@ -141,10 +144,10 @@ void straveRight(int angle, int dist /* Defined in degrees */){
 }
 
 /* The 'straveLeft' function makes the robot make a wide turn to the left for a given amount of degrees and a given speed. */
-void straveLeft(int angle, int dist /* Defined in degrees */){
+void straveLeft(int angle, int dist /* Defined in degrees */, uint16_t speed){
     float number_of_steps_right = ((ROBOT_WIDTH + dist)*2*PI*angle*STRAIGTH_STEPS_IN_CM)/360;
     float number_of_steps_left = (dist*2*PI*angle*STRAIGTH_STEPS_IN_CM)/360;
-    float rotation_speed_right = ROTATION_SPEED;
+    float rotation_speed_right = speed;
     float rotation_speed_left = (ROBOT_WIDTH + dist)/dist*rotation_speed_right;
 
     stepper_enable();
@@ -155,22 +158,23 @@ void straveLeft(int angle, int dist /* Defined in degrees */){
 
 /* The 'dance' function makes the robot do a little dance ;) */
 void dance(void){
-    turnRight(18);
+    uint16_t speed = 15000;
+    turnRight(18, speed);
     for(int i = 0; i < 5; i++){
-        turnLeft(30);
-        turnRight(30);
+        turnLeft(30, speed);
+        turnRight(30, speed);
     }
-    turnLeft(18);
-    twist(-90);
-    straigth(25);
-    turnRight(90);
-    twist(180);
-    straveLeft(30,10);
+    turnLeft(18, speed);
+    twist(-90, speed);
+    straigth(25, speed);
+    turnRight(90, speed);
+    twist(180, speed);
+    straveLeft(30,10, speed);
     for(int i = 0; i < 5; i++){
-        straveRight(-60,10);
-        straveLeft(60,10);
+        straveRight(-60,10, speed);
+        straveLeft(60,10, speed);
     }
-    straveRight(-30,10);
+    straveRight(-30,10, speed);
 }
 
 
@@ -217,22 +221,26 @@ int sizeDetection(vl53x sensor) {
 
     printf("Other Corner Found!\nDistance = %dmm\nNumber of Measurements = %d\n\n", iDistance, number_of_measurements);
 
-    if (number_of_measurements >= 11 && number_of_measurements <= 13) return 1;
-    else if (number_of_measurements >= 14 && number_of_measurements <= 18) return 2;
-    else if (number_of_measurements > 18) return 3;
-    
+    if (number_of_measurements >= SMALL_BLOCK_MIN_NUM_MEASUREMENTS
+        && number_of_measurements <= SMALL_BLOCK_MAX_NUM_MEASUREMENTS)  return 1;
+    else if (number_of_measurements > SMALL_BLOCK_MIN_NUM_MEASUREMENTS
+        && number_of_measurements <= BIG_BLOCK_MAX_NUM_MEASUREMENTS)    return 2;
+    else if (number_of_measurements > BIG_BLOCK_MAX_NUM_MEASUREMENTS)   return 3;
     return 0;
 }
 
 /* The 'objectDectection' function make a 360 degree turn and detects the closest objects to the robot and then turns back to the closest object */
-void objectDetection(vl53x sensor) {
+int objectDetectionTwist(vl53x sensor) {
+    stepper_reset();
+    stepper_enable();
+
     int32_t iDistance;
     int32_t iDistanceArr[NUMBER_OF_MEASUREMENT_FOR_TURNING+1];
-
-    twist(-360);
+    int loop = 0;
+    twist(-360, 48000);
     for(int i = 0; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) {
         iDistanceArr[i] =  tofReadDistance(&sensor);
-        printf("1: Distance = %dmm\n", iDistanceArr[i]);
+        printf("%d: Distance = %dmm\n", i, iDistanceArr[i]);
     }
     waitTillDone();
 
@@ -241,14 +249,19 @@ void objectDetection(vl53x sensor) {
     printf("lowest distance index: %d\nlowest distance: %d\nArr: [%d", lowest_distance_index, iDistanceArr[lowest_distance_index], iDistanceArr[0]);
     for(int i = 1; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) printf(", %d", iDistanceArr[i]);
     printf("]\n");
-    twist(360);
     
+    twist(360, 48000);
+
     do {
+        loop++;
         iDistance =  tofReadDistance(&sensor);
         printf("2: Distance = %dmm\n", iDistance);
-    } while(-25 > iDistance - iDistanceArr[lowest_distance_index] || iDistance - iDistanceArr[lowest_distance_index] > 25);
+    } while((-25 > iDistance - iDistanceArr[lowest_distance_index] || iDistance - iDistanceArr[lowest_distance_index] > 25) && loop < 180);
     
     stepper_disable();
     stepper_reset();
     stepper_enable();
+
+    if (loop == 180) return 0;
+    else return 1;
 }
