@@ -9,13 +9,15 @@
 int vl53l0xExample(void) {
     int sensor_ping;
     uint8_t addr = 0x29;
-	sensor_ping = tofPing(IIC0, addr);
-	printf("Sensor Ping: ");
-	if(sensor_ping != 0) {
-		printf("Fail\n");
-		return 1;
-	}
-	printf("Succes\n");
+    do {
+        sensor_ping = tofPing(IIC0, addr);
+        printf("Sensor Ping: ");
+        if(sensor_ping != 0) {
+            printf("Fail\n");
+            iic_destroy(IIC0);
+            iic_init(IIC0);
+        } else printf("Succes\n");
+    } while(sensor_ping != 0);
 	// Create a sensor struct
 	vl53x sensor;
 
@@ -38,24 +40,22 @@ int vl53l0xExample(void) {
 	stepper_init();
 	stepper_reset();	
 	stepper_enable();
+	if(objectDetectionTwist(sensor)) {
+        iDistance = tofReadDistance(&sensor);
+        do {
+            prevDistance = iDistance;
+            iDistance = tofReadDistance(&sensor);
+            printf("Distance = %dmm\n", iDistance);
+            stepper_steps(64, 64);
+        } while(iDistance > 200 || prevDistance > 200);
 
-	objectDetection(sensor);
+        int size = sizeDetection(sensor);
 
-	iDistance = tofReadDistance(&sensor);
-	do {
-		prevDistance = iDistance;
-		iDistance = tofReadDistance(&sensor);
-		printf("Distance = %dmm\n", iDistance);
-		stepper_steps(64, 64);
-	} while(iDistance > 200 || prevDistance > 200);
-
-	int size = sizeDetection(sensor);
-
-	if (size == 1) printf("Block is of size 3x3x3!\n");
-	else if (size == 2) printf("Block is of size 6x6x6!\n");
-	else if (size == 3) printf("Mountain detected!\n");
-	else if (size == 0) printf("Error no size detected\n");
-
+        if (size == 1) printf("Block is of size 3x3x3!\n");
+        else if (size == 2) printf("Block is of size 6x6x6!\n");
+        else if (size == 3) printf("Mountain detected!\n");
+        else if (size == 0) printf("Error no size detected\n");
+    }
 	stepper_disable();
 	stepper_destroy();
 	return EXIT_SUCCESS;
