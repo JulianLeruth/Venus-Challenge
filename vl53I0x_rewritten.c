@@ -116,7 +116,7 @@ static unsigned short readReg16(vl53x *ptr_s, uint8_t ucAddr) {
 static uint8_t readReg(vl53x *ptr_s, uint8_t ucAddr) {
     uint8_t ucTemp;
     if (setjmp(s_jumpBuffer)) {
-        return -1;
+        return 0;
     } else {
         iic_read_register(ptr_s->iic_index, ptr_s->baseAddr, ucAddr, &ucTemp, 1);
     }
@@ -641,6 +641,7 @@ int initSensor(vl53x *ptr_s, int bLongRangeMode) {
 uint16_t readRangeContinuousMillimeters(vl53x *ptr_s) {
     int iTimeout = 0;
     uint16_t range;
+    if (readReg(ptr_s, VL53L0X_RESULT_INTERRUPT_STATUS) == 0) return 0;
     while ((readReg(ptr_s, VL53L0X_RESULT_INTERRUPT_STATUS) & 0x07) == 0) {
         iTimeout++;
         sleep_msec(50);
