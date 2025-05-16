@@ -11,4 +11,4 @@ void straveLeft(int angle, int dist);
 void dance(void);
 
 int sizeDetection(vl53x sensor);
-void objectDetection(vl53x sensor);
+int objectDetectionTwist(vl53x sensor);
