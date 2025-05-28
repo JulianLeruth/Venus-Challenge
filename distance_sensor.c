@@ -6,7 +6,7 @@
 #include "vl53l0x.h"
 #include "movement_lib.h"
 
-int vl53l0xExample(void) {
+int vl53l0xPing(vl53x* sensor) {
     int sensor_ping;
     uint8_t addr = 0x29;
     do {
@@ -18,36 +18,88 @@ int vl53l0xExample(void) {
             iic_init(IIC0);
         } else printf("Succes\n");
     } while(sensor_ping != 0);
-	// Create a sensor struct
-	vl53x sensor;
 
 	// Initialize the sensor
-	sensor_ping = tofInit(&sensor, IIC0, addr, 0); // set default range mode (up to 800mm)
-	if (sensor_ping != 0) {
-		return -1; // problem - quit
-	}
+	sensor_ping = tofInit(sensor, IIC0, addr, 0); // set default range mode (up to 800mm)
+	if (sensor_ping != 0) return -1; // problem - quit
 	uint8_t model, revision;
 
 	printf("VL53L0X device successfully opened.\n");
-	tofGetModel(&sensor, &model, &revision);
+	tofGetModel(sensor, &model, &revision);
 	printf("Model ID - %d\n", model);
 	printf("Revision ID - %d\n", revision);
 	fflush(NULL); //Get some output even is distance readings hang
-	
+    return 1;
+}
+
+int vl53l0xFlush(vl53x* sensor) {
+    int sensor_ping;
+    uint8_t addr = 0x29;
+    do {
+        sensor_ping = tofPing(IIC0, addr);
+        if(sensor_ping != 0) {
+            iic_destroy(IIC0);
+            iic_init(IIC0);
+        }
+    } while(sensor_ping != 0);
+
+	// Initialize the sensor
+	sensor_ping = tofInit(sensor, IIC0, addr, 0); // set default range mode (up to 800mm)
+	if (sensor_ping != 0) return -1; // problem - quit
+	fflush(NULL); //Get some output even is distance readings hang
+    return 1;
+}
+
+int vl53l0xTest(void) {
+    // Create a sensor struct
+	vl53x sensor;
+    if(vl53l0xPing(&sensor) == -1) return -1;
+    int number_of_dist_measurements = 0;
 	int32_t iDistance;
-	int32_t prevDistance;
+    while(1) {
+        iDistance = tofReadDistance(&sensor);
+        printf("Distance: %dmm\n", iDistance);
+        sleep_msec(50);
+        number_of_dist_measurements++;
+        if (number_of_dist_measurements % 50 == 0) {
+            printf("Flushed\n");
+            iic_destroy(IIC0);
+            iic_init(IIC0);
+            if (vl53l0xFlush(&sensor) == -1) return -1;
+        }
+    }
+	return EXIT_SUCCESS;
+}
+
+int vl53l0xExample(void) {
+    // Create a sensor struct
+	vl53x sensor;
+    if(vl53l0xPing(&sensor) == -1) return -1;
+
+    int number_of_dist_measurements = 0;
+	int32_t iDistance;
+	int32_t prev_distance;
     
 	stepper_init();
 	stepper_reset();	
 	stepper_enable();
 	if(objectDetectionTwist(sensor)) {
+        stepper_set_speed(45000, 45000);
         iDistance = tofReadDistance(&sensor);
         do {
-            prevDistance = iDistance;
+            prev_distance = iDistance;
             iDistance = tofReadDistance(&sensor);
             printf("Distance = %dmm\n", iDistance);
             stepper_steps(64, 64);
-        } while(iDistance > 200 || prevDistance > 200);
+            sleep_msec(50);
+            number_of_dist_measurements++;
+            if (number_of_dist_measurements % 50 == 0) {
+                printf("Flushed\n");
+                iic_destroy(IIC0);
+                iic_init(IIC0);
+                if (vl53l0xFlush(&sensor) == -1) return -1;
+            }
+        } while(iDistance > 200 || prev_distance > 200);
 
         int size = sizeDetection(sensor);
 
