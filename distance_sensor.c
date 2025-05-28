@@ -50,6 +50,17 @@ int vl53l0xFlush(vl53x* sensor) {
     return 1;
 }
 
+int flushIICChannel(vl53x* sensor, int number_of_dist_measurements) {
+    if (number_of_dist_measurements >= 50) {
+        printf("Flushed\n");
+        iic_destroy(IIC0);
+        iic_init(IIC0);
+        if (vl53l0xFlush(sensor) == -1) return -1;
+        return 1;
+    }
+    return 0;
+}
+
 int vl53l0xTest(void) {
     // Create a sensor struct
 	vl53x sensor;
@@ -61,12 +72,9 @@ int vl53l0xTest(void) {
         printf("Distance: %dmm\n", iDistance);
         sleep_msec(50);
         number_of_dist_measurements++;
-        if (number_of_dist_measurements % 50 == 0) {
-            printf("Flushed\n");
-            iic_destroy(IIC0);
-            iic_init(IIC0);
-            if (vl53l0xFlush(&sensor) == -1) return -1;
-        }
+        int temp = flushIICChannel(&sensor, number_of_dist_measurements);
+        if (temp == -1) return -1;
+        if (temp == 1) number_of_dist_measurements = 0;
     }
 	return EXIT_SUCCESS;
 }
@@ -93,12 +101,9 @@ int vl53l0xExample(void) {
             stepper_steps(64, 64);
             sleep_msec(50);
             number_of_dist_measurements++;
-            if (number_of_dist_measurements % 50 == 0) {
-                printf("Flushed\n");
-                iic_destroy(IIC0);
-                iic_init(IIC0);
-                if (vl53l0xFlush(&sensor) == -1) return -1;
-            }
+            int temp = flushIICChannel(&sensor, number_of_dist_measurements);
+            if (temp == -1) return -1;
+            if (temp == 1) number_of_dist_measurements = 0;
         } while(iDistance > 200 || prev_distance > 200);
 
         int size = sizeDetection(sensor);
