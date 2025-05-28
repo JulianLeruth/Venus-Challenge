@@ -14,7 +14,8 @@ int main(void) {
 	iic_init(IIC0);
 
 	vl53l0xExample();
-	
+	// vl53l0xTest();
+    
 	iic_destroy(IIC0);
 	pynq_destroy();
 	return EXIT_SUCCESS;
