@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <iic.h>
 #include "vl53l0x.h"
+#include "movement_lib.h"
 #include "distance_sensor.h"
 
 int main(void) {
