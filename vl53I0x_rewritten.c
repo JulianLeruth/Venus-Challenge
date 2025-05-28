@@ -11,9 +11,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <setjmp.h>
-
-static jmp_buf s_jumpBuffer;
 
 static uint8_t readReg(vl53x *ptr_s, uint8_t ucAddr);
 static unsigned short readReg16(vl53x *ptr_s, uint8_t ucAddr);
@@ -115,11 +112,7 @@ static unsigned short readReg16(vl53x *ptr_s, uint8_t ucAddr) {
 /* Read a single register value from I2C device */
 static uint8_t readReg(vl53x *ptr_s, uint8_t ucAddr) {
     uint8_t ucTemp;
-    if (setjmp(s_jumpBuffer)) {
-        return 0;
-    } else {
-        iic_read_register(ptr_s->iic_index, ptr_s->baseAddr, ucAddr, &ucTemp, 1);
-    }
+    iic_read_register(ptr_s->iic_index, ptr_s->baseAddr, ucAddr, &ucTemp, 1);
 	return ucTemp;
 } /* readReg() */
 
@@ -699,3 +692,4 @@ int tofGetModel(vl53x *sensor, uint8_t *model, uint8_t *revision) {
 	return 0;
 
 } /* tofGetModel() */
+
