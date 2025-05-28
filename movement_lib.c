@@ -4,6 +4,8 @@
 #include <math.h>
 #include <iic.h>
 #include "vl53l0x.h"
+#include "distance_sensor.h"
+
 /*
 *=== Motor Size, Speed and Steps Info ===*
         Maximum speed = 3024
@@ -25,11 +27,11 @@
 #define PI 3.14159265358979323846
 #define ROBOT_WIDTH 12.3
 #define STRAIGTH_STEPS_IN_CM 64                     // Max number of steps ~= 32767
-#define NUMBER_OF_MEASUREMENT_FOR_TURNING 180
+#define NUMBER_OF_MEASUREMENT_FOR_TURNING 120
 #define NUMBER_OF_DIST_MEASUREMENT_PER_SECOND 20
 
 #define SMALL_BLOCK_MIN_NUM_MEASUREMENTS 5          // The minimum number of measurements it should take for the robot to detect a small block.
-#define SMALL_BLOCK_MAX_NUM_MEASUREMENTS 15         // The maximum number of measurements it can take for the robot to detect a small block and the minimum for the robot to detect a big block.
+#define SMALL_BLOCK_MAX_NUM_MEASUREMENTS 13         // The maximum number of measurements it can take for the robot to detect a small block and the minimum for the robot to detect a big block.
 #define BIG_BLOCK_MAX_NUM_MEASUREMENTS 25           // The maximum number of measurements it can take for the robot to detect a big block.
 
 
@@ -58,15 +60,21 @@ int highestValueIndex(int* arr) {
 int lowestValueIndex(int* arr) {
     int index = 0;
     for (int i = 1; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) {
-        if (arr[0] == 0) {
+        if (arr[0] <= 100) {
         index = 1;
         i++;
         }
-        if (arr[i] < arr[index] && arr[i] != 0) index = i;
+        if (arr[i] < arr[index] && arr[i] > 50) index = i;
     }
     return index;
 }
 
+/* The 'convoluteArr' function takes an average of the value before, the value of and the value after an index of the array. */
+void convoluteArr(int* arr) {
+    for(int i = 1; i < NUMBER_OF_MEASUREMENT_FOR_TURNING-1; i++) {
+        arr[i] = (arr[i-1]+arr[i]+arr[i+1])/3;
+    }
+}
 
 // ==================== Movement check functions ==================== //
 /* The 'waitTillDone' function stops the code until all steps are taken by the stepper motor. */
@@ -75,7 +83,7 @@ void waitTillDone(void){
     int16_t TEMP_left = 0;
     do {
         stepper_get_steps(&TEMP_right, &TEMP_left);
-        sleep_msec(50);
+        sleep_msec(5);
     } while(TEMP_right != 0 || TEMP_left != 0);
     return;
 }
@@ -90,6 +98,12 @@ int check_if_done(void){
     else return 1;                                      // Returns 1 if done
 }
 
+void motorReset() {
+    stepper_disable();
+    stepper_steps_done();
+    stepper_reset();
+    stepper_enable();
+}
 
 // ==================== Basic Movement Funtions ===================== //
 /* The 'straight' function makes the robot go straight for a given amount of distance and a given speed. */
@@ -184,7 +198,7 @@ int sizeDetection(vl53x sensor) {
     int32_t iDistance;
     int32_t prevDistance;
     int number_of_measurements = 2;
-    
+    int number_of_dist_measurements = 0;
     iDistance = tofReadDistance(&sensor);
     do {
         prevDistance = iDistance;
@@ -192,6 +206,13 @@ int sizeDetection(vl53x sensor) {
         printf("Left: Distance = %dmm\n", iDistance);
         stepper_steps(-16, 16);
         waitTillDone();
+        number_of_dist_measurements++;
+        if (number_of_dist_measurements % 50 == 0) {
+            printf("Flushed\n");
+            iic_destroy(IIC0);
+            iic_init(IIC0);
+            if (vl53l0xFlush(&sensor) == -1) return -1;
+        }
     } while(iDistance - prevDistance < 100);
     
     stepper_disable();
@@ -215,9 +236,7 @@ int sizeDetection(vl53x sensor) {
         number_of_measurements++;
     } while(iDistance < 500 && iDistance - prevDistance < 100);
     
-    stepper_disable();
-    stepper_reset();
-    stepper_enable();
+    motorReset();
 
     printf("Other Corner Found!\nDistance = %dmm\nNumber of Measurements = %d\n\n", iDistance, number_of_measurements);
 
@@ -234,34 +253,60 @@ int objectDetectionTwist(vl53x sensor) {
     stepper_reset();
     stepper_enable();
 
-    int32_t iDistance;
     int32_t iDistanceArr[NUMBER_OF_MEASUREMENT_FOR_TURNING+1];
     int loop = 0;
-    twist(-360, 48000);
+    int number_of_dist_measurements = 0;
+
+    twist(-360, 63000);
     for(int i = 0; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) {
         iDistanceArr[i] =  tofReadDistance(&sensor);
         printf("%d: Distance = %dmm\n", i, iDistanceArr[i]);
+        sleep_msec(50);
+        number_of_dist_measurements++;
+        if (number_of_dist_measurements % 50 == 0) {
+            printf("Flushed\n");
+            iic_destroy(IIC0);
+            iic_init(IIC0);
+            if (vl53l0xFlush(&sensor) == -1) return -1;
+        }
     }
     waitTillDone();
 
     int lowest_distance_index = lowestValueIndex(iDistanceArr);
-
-    printf("lowest distance index: %d\nlowest distance: %d\nArr: [%d", lowest_distance_index, iDistanceArr[lowest_distance_index], iDistanceArr[0]);
+    printf("\n\033[0;31mlowest distance index: \033[0;37m%d\n\033[0;31mlowest distance: \033[0;37m%d mm \n\nArr: [%d", lowest_distance_index, iDistanceArr[lowest_distance_index], iDistanceArr[0]);
     for(int i = 1; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) printf(", %d", iDistanceArr[i]);
     printf("]\n");
-    
-    twist(360, 48000);
 
-    do {
-        loop++;
-        iDistance =  tofReadDistance(&sensor);
-        printf("2: Distance = %dmm\n", iDistance);
-    } while((-25 > iDistance - iDistanceArr[lowest_distance_index] || iDistance - iDistanceArr[lowest_distance_index] > 25) && loop < 180);
-    
-    stepper_disable();
-    stepper_reset();
-    stepper_enable();
+    convoluteArr(iDistanceArr);
+    printf("\nArr: [%d", iDistanceArr[0]);
+    for(int i = 1; i < NUMBER_OF_MEASUREMENT_FOR_TURNING; i++) printf(", %d", iDistanceArr[i]);
+    printf("]\n");
 
-    if (loop == 180) return 0;
+    // int32_t iDistance;
+    // twist(360, 63000);
+
+    // do {
+    //     sleep_msec(50);
+    //     loop++;
+    //     iDistance =  tofReadDistance(&sensor);
+    //     printf("%d: Distance = %dmm\n", NUMBER_OF_MEASUREMENT_FOR_TURNING - loop, iDistance);
+    //     number_of_dist_measurements++;
+    //     if (number_of_dist_measurements % 50 == 0) {
+    //         printf("Flushed\n");
+    //         iic_destroy(IIC0);
+    //         iic_init(IIC0);
+    //         if (vl53l0xFlush(&sensor) == -1) return -1;
+    //     }
+    // } while((-35 > iDistance - iDistanceArr[lowest_distance_index] || iDistance - iDistanceArr[lowest_distance_index] > 35) && loop < NUMBER_OF_MEASUREMENT_FOR_TURNING);
+    
+    // stepper_disable();
+    // stepper_reset();
+    // stepper_enable();
+    // stepper_steps(64, -64);
+    
+    printf("\033[0;32m\nTurning %d degrees!\n\n\033[0;37m", 360*-lowest_distance_index/NUMBER_OF_MEASUREMENT_FOR_TURNING);
+    twist(-360*lowest_distance_index/NUMBER_OF_MEASUREMENT_FOR_TURNING, 48000);
+    
+    if (loop == NUMBER_OF_MEASUREMENT_FOR_TURNING) return 0;
     else return 1;
 }
