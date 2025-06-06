@@ -8,6 +8,6 @@
 // ========== Motor Size, Speed and Steps Info =========== //<br />
 Maximum speed = 3024<br />
 Minimum speed = 65535<br />
-Wheel have diameter of ~8 cm and circonfrence of ~25 cm<br />
+Wheel have diameter of ~8 cm and circumference of ~25 cm<br />
 1 Rotation ~= 1600 Steps<br />
 1 cm ~= 64 steps<br />
