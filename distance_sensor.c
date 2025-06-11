@@ -13,15 +13,15 @@ int vl53l0xPing(vl53x* sensor) {
         sensor_ping = tofPing(IIC0, addr);
         printf("Sensor Ping: ");
         if(sensor_ping != 0) {
-            printf("Fail\n");
+		    printf("\033[31m✘ Fail\033[0m\n");
             iic_destroy(IIC0);
             iic_init(IIC0);
-        } else printf("Succes\n");
+        } else printf("\033[32m✔ Succes\033[0m\n");
     } while(sensor_ping != 0);
 
 	// Initialize the sensor
 	sensor_ping = tofInit(sensor, IIC0, addr, 0); // set default range mode (up to 800mm)
-	if (sensor_ping != 0) return -1; // problem - quit
+	if (sensor_ping != 0) return EXIT_FAILURE;
 	uint8_t model, revision;
 
 	printf("VL53L0X device successfully opened.\n");
@@ -29,7 +29,7 @@ int vl53l0xPing(vl53x* sensor) {
 	printf("Model ID - %d\n", model);
 	printf("Revision ID - %d\n", revision);
 	fflush(NULL); //Get some output even is distance readings hang
-    return 1;
+    return EXIT_SUCCESS;
 }
 
 int vl53l0xFlush(vl53x* sensor) {
@@ -45,36 +45,52 @@ int vl53l0xFlush(vl53x* sensor) {
 
 	// Initialize the sensor
 	sensor_ping = tofInit(sensor, IIC0, addr, 0); // set default range mode (up to 800mm)
-	if (sensor_ping != 0) return -1; // problem - quit
+	if (sensor_ping != 0) return EXIT_FAILURE; // problem - quit
 	fflush(NULL); //Get some output even is distance readings hang
-    return 1;
+    
+    return EXIT_SUCCESS;
 }
 
-int flushIICChannel(vl53x* sensor, int number_of_dist_measurements) {
-    if (number_of_dist_measurements >= 50) {
+int flushIICChannel(vl53x* sensor, int measurements) {
+    if (measurements >= 50) {
         printf("Flushed\n");
         iic_destroy(IIC0);
         iic_init(IIC0);
-        if (vl53l0xFlush(sensor) == -1) return -1;
-        return 1;
+        if (vl53l0xFlush(sensor) == EXIT_FAILURE) return EXIT_FAILURE;
+        return EXIT_SUCCESS;
     }
     return 0;
+}
+
+int vl53l0xTestWithGiven(vl53x* sensor) {
+    int number_of_dist_measurements = 0;
+	int32_t iDistance;
+    for(int i = 0; i < 100; i++) {
+        iDistance = tofReadDistance(sensor);
+        printf("Distance: %dmm\n", iDistance);
+        sleep_msec(50);
+        number_of_dist_measurements++;
+        int temp = flushIICChannel(sensor, number_of_dist_measurements);
+        if (temp == EXIT_FAILURE) return EXIT_FAILURE;
+        if (temp == EXIT_SUCCESS) number_of_dist_measurements = 0;
+    }
+	return EXIT_SUCCESS;
 }
 
 int vl53l0xTest(void) {
     // Create a sensor struct
 	vl53x sensor;
-    if(vl53l0xPing(&sensor) == -1) return -1;
+    if(vl53l0xPing(&sensor) == EXIT_FAILURE) return EXIT_FAILURE;
     int number_of_dist_measurements = 0;
 	int32_t iDistance;
-    while(1) {
+    for(int i = 0; i < 100; i++) {
         iDistance = tofReadDistance(&sensor);
         printf("Distance: %dmm\n", iDistance);
         sleep_msec(50);
         number_of_dist_measurements++;
         int temp = flushIICChannel(&sensor, number_of_dist_measurements);
-        if (temp == -1) return -1;
-        if (temp == 1) number_of_dist_measurements = 0;
+        if (temp == EXIT_FAILURE) return EXIT_FAILURE;
+        if (temp == EXIT_SUCCESS) number_of_dist_measurements = 0;
     }
 	return EXIT_SUCCESS;
 }
@@ -82,7 +98,7 @@ int vl53l0xTest(void) {
 int vl53l0xExample(void) {
     // Create a sensor struct
 	vl53x sensor;
-    if(vl53l0xPing(&sensor) == -1) return -1;
+    if(vl53l0xPing(&sensor) == EXIT_FAILURE) return EXIT_FAILURE;
 
     int number_of_dist_measurements = 0;
 	int32_t iDistance;
@@ -91,7 +107,7 @@ int vl53l0xExample(void) {
 	stepper_init();
 	stepper_reset();	
 	stepper_enable();
-	if(objectDetectionTwist(sensor)) {
+	if(objectDetectionTwist360(&sensor)) {
         stepper_set_speed(45000, 45000);
         iDistance = tofReadDistance(&sensor);
         do {
@@ -102,11 +118,11 @@ int vl53l0xExample(void) {
             sleep_msec(50);
             number_of_dist_measurements++;
             int temp = flushIICChannel(&sensor, number_of_dist_measurements);
-            if (temp == -1) return -1;
-            if (temp == 1) number_of_dist_measurements = 0;
+            if (temp == EXIT_FAILURE) return EXIT_FAILURE;
+            if (temp == EXIT_SUCCESS) number_of_dist_measurements = 0;
         } while(iDistance > 200 || prev_distance > 200);
 
-        int size = sizeDetection(sensor);
+        int size = sizeDetection(&sensor);
 
         if (size == 1) printf("Block is of size 3x3x3!\n");
         else if (size == 2) printf("Block is of size 6x6x6!\n");
