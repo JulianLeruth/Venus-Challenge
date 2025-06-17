@@ -15,20 +15,6 @@
 #include "colour_sensor.h"
 #include "infrared_sensor.h"
 
-
-#define MUX_CHANNEL_DIST_SENSOR_0       0
-#define MUX_CHANNEL_DIST_SENSOR_1       1
-#define MUX_CHANNEL_COLOUR_SENSOR_0     7
-#define MUX_CHANNEL_COLOUR_SENSOR_1     3
-
-#define INTEGRATION_TIME_MS            60
-
-#define BLACK                           0
-#define WHITE                           1
-#define RED                             2
-#define BLUE                            3
-#define GREEN                           4
-
 struct block_t {
     int size;
     int color;
@@ -50,18 +36,21 @@ int main(void) {
     iic_init(IIC0);
     stepper_init();
     
-    // float r_loc_x = 0;          // The X location of the robot, relative to the starting position
-    // float r_loc_y = 0;          // The Y location of the robot, relative to the starting position
-    // float robot_angle = 0;      // The angle of the robot, relative to the starting position
-
+    double r_loc_x = 50;            // The X location of the robot, relative to the starting position.
+    double r_loc_y = 50;            // The Y location of the robot, relative to the starting position.
+    double r_angle = 0;             // The angle of the robot, relative to the starting position.
+    
+    int function;                   // A variable for checking function outputs.
     /* ========================= Switchbox Set-up ========================= */
     switchbox_set_pin(IO_AR_SCL, SWB_IIC0_SCL);
     switchbox_set_pin(IO_AR_SDA, SWB_IIC0_SDA);
+    
+    switchbox_set_pin(IO_AR5, SWB_GPIO);
+    switchbox_set_pin(IO_AR6, SWB_GPIO);
+    
     switchbox_set_pin(IO_AR4, SWB_GPIO);
     gpio_set_direction(IO_AR4, GPIO_DIR_OUTPUT);
     gpio_set_level(IO_AR4, GPIO_LEVEL_LOW);
-    switchbox_set_pin(IO_AR5, SWB_GPIO);
-    switchbox_set_pin(IO_AR6, SWB_GPIO);
     
     /* ======================== Multiplexer Set-up ======================== */
     tca9548a mux;
@@ -91,32 +80,43 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    
-    /* ======================== Movement Functions ======================== */
-    tca9548a_switch_channel(&mux, MUX_CHANNEL_DIST_SENSOR_0);
-    
-	if (objectDetectionTwistPart(&dist_sensor, 180) == EXIT_FAILURE) return EXIT_FAILURE;
-    if (objectAproach(&dist_sensor, 200) == EXIT_FAILURE) return EXIT_FAILURE;
-    int block_size = sizeDetection(&dist_sensor);
-    if (block_size == 1) printf("Block is of size 3x3x3!\n");
-    else if (block_size == 2) printf("Block is of size 6x6x6!\n");
-    else if (block_size == 3) printf("Mountain detected!\n");
-    else if (block_size == 0) printf("Error no size detected\n");
-    if (objectDetectionTwistPart(&dist_sensor, 40) == EXIT_FAILURE) return EXIT_FAILURE;
-    
-    if (objectAproach(&dist_sensor, 35) == EXIT_FAILURE) return EXIT_FAILURE;
-
-    tca9548a_switch_channel(&mux, MUX_CHANNEL_COLOUR_SENSOR_0);
-    
-    int block_colour = colourSensor(&colour_sensor, INTEGRATION_TIME_MS);
-    if (block_colour == BLACK) printf("Block is black!\n");
-    else if (block_colour == WHITE) printf("Block is white!\n");
-    else if (block_colour == RED) printf("Block is red!\n");
-    else if (block_colour == BLUE) printf("Block is blue!\n");
-    else if (block_colour == GREEN) printf("Block is green!\n");
 
 
-     
+
+    
+    /* ======================== Movement Algoritme ======================== */
+    if (tca9548a_switch_channel(&mux, MUX_CHANNEL_DIST_SENSOR_0) == EXIT_FAILURE) return EXIT_FAILURE;
+    
+    location(r_loc_x, r_loc_y, r_angle);
+    function = objectDetectionTwist(&dist_sensor, 180, &r_angle, 500);
+    location(r_loc_x, r_loc_y, r_angle);
+    if (function == EXIT_ERROR) {
+        stepper_enable();
+        printf("Stepper enables\n");
+        straigth(50, 30000, &r_loc_x, &r_loc_y, &r_angle);
+        printf("Stepper going straight\n");
+        while(check_if_done() != 1) {
+            printf("");
+            if (IRborderDetection() != IR_NONE) {
+                stepper_disable();
+                break;
+            }
+        }
+
+        if (objectDetectionTwist(&dist_sensor, 360, &r_angle, 80) == EXIT_FAILURE) return EXIT_FAILURE;
+        location(r_loc_x, r_loc_y, r_angle);
+    }
+    else if (function == EXIT_SUCCESS) {
+        if (objectScan(&dist_sensor, &mux, &colour_sensor, &r_loc_x, &r_loc_y, &r_angle)
+        == EXIT_FAILURE) return EXIT_FAILURE;
+        // GO AROUND
+    }
+    else if (function == EXIT_FAILURE) return EXIT_FAILURE;
+    
+    
+    
+    
+    
     /* ====================== Destroy and exit code ======================= */
     __destroy__(&mux, EXIT_SUCCESS);
 
