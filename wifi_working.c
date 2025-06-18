@@ -3,6 +3,17 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+int send_data(int x, int y, char* type, int size, char* colour){
+    /*********** Read input from terminal **************/
+        printf(""); //PUT HERE THE DATA WITH VARIABLES
+        fflush(NULL); //Flush the terminal buffer
+        for(uint32_t i = 0; i < length; i++)
+        {
+            uart_send(UART0, buf[i]); //Send the payload bytes
+        }    
+    /***************************************************/
+}
+
 int main()
 {
     switchbox_init();
@@ -15,27 +26,7 @@ int main()
     uart_reset_fifos(UART0);
     
     while (1)
-    {   
-        /*********** Read input from terminal **************/
-        int numRead = read(0, buf, 256);
-        if(numRead > 0)    
-        {
-            uint32_t length = numRead - 1; //Do not send newline char
-            uint8_t* len_bytes = (uint8_t*)&length; //Cast uint32_t to array of uint8_t
-            printf("<< Outgoing Message: Size = %d\n", length);
-            fflush(NULL); //Flush the terminal buffer
-            for(uint32_t i = 0; i < 4; i++)
-            {
-                uart_send(UART0, len_bytes[i]); //Send payload length in bytes
-            }
-            for(uint32_t i = 0; i < length; i++)
-            {
-                uart_send(UART0, buf[i]); //Send the payload bytes
-            }    
-        }
-        /***************************************************/
-
-        
+    {           
         /*********** Write output to terminal **************/
         if(uart_has_data(UART0))
             {
@@ -55,6 +46,11 @@ int main()
                 i++;
             }
             printf("  >%s\n", buffer);
+
+            if(strcmp(buffer, "yes") == 0){
+                
+            }
+            
             fflush(NULL); //Flush the terminal buffer
             free(buffer);
         }
