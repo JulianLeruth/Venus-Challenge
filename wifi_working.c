@@ -7,6 +7,7 @@ int send_data(int x, int y, char* type, int size, char* colour){
     /*********** Read input from terminal **************/
         printf(""); //PUT HERE THE DATA WITH VARIABLES
         fflush(NULL); //Flush the terminal buffer
+        
         for(uint32_t i = 0; i < length; i++)
         {
             uart_send(UART0, buf[i]); //Send the payload bytes
