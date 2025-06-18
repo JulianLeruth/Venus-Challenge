@@ -7,10 +7,13 @@ int send_data(int x, int y, char* type, int size, char* colour){
     /*********** Read input from terminal **************/
         printf(""); //PUT HERE THE DATA WITH VARIABLES
         fflush(NULL); //Flush the terminal buffer
+        char string[?length];
+
+        sprintf(string, "x: %d, y: %d, type: %s, size: %d, colour: %s", x, y, type, size, colour);
         
         for(uint32_t i = 0; i < length; i++)
         {
-            uart_send(UART0, buf[i]); //Send the payload bytes
+            uart_send(UART0, string[i]); //Send the payload bytes
         }    
     /***************************************************/
 }
@@ -31,14 +34,6 @@ int main()
         /*********** Write output to terminal **************/
         if(uart_has_data(UART0))
             {
-            // uint8_t read_len[4];
-            // for(uint32_t i = 0; i < 4; i++)
-            // {
-            //     read_len[i] = uart_recv(UART0); //Read the payload length in bytes
-            // }
-            // uint32_t length = *((uint32_t*)read_len); //Cast array to uint32_t number. 
-            // printf(">> Incoming Message: Length = %d\n", length);
-            // fflush(NULL); //Flush the terminal buffer
             uint32_t i = 0;    
             char* buffer = (char*) malloc(sizeof(char) * length);
             while(i < length)
@@ -46,10 +41,10 @@ int main()
                 buffer[i] = (char)uart_recv(UART0); // Read the payload into memory
                 i++;
             }
-            printf("  >%s\n", buffer);
+            //printf("  >%s\n", buffer); DEBUG
 
             if(strcmp(buffer, "yes") == 0){
-                
+                send_data(x, y, type, size, colour);
             }
             
             fflush(NULL); //Flush the terminal buffer
