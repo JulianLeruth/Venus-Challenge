@@ -3,13 +3,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-int send_data(int x, int y, char* type, int size, char* colour){
+int send_data(float x, float y, char* type){
     /*********** Read input from terminal **************/
         printf(""); //PUT HERE THE DATA WITH VARIABLES
         fflush(NULL); //Flush the terminal buffer
-        char string[?length];
+        char string[60];
 
-        sprintf(string, "x: %d, y: %d, type: %s, size: %d, colour: %s", x, y, type, size, colour);
+        sprintf(string, "{\"x\": %.1f, \"y\": %.1f, \"type\": %s}", x, y, type);
+        int length = strlen(string);
         
         for(uint32_t i = 0; i < length; i++)
         {
