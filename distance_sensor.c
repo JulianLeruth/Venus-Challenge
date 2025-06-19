@@ -1,10 +1,19 @@
 #include <libpynq.h>
+#include <switchbox.h>
 #include <stepper.h>
 #include <stdio.h>
 #include <math.h>
 #include <iic.h>
+#include <gpio.h>
+
 #include "vl53l0x.h"
+#include "tcs3472.h"
+#include "tca9548a.h"
+
 #include "movement_lib.h"
+#include "distance_sensor.h"
+#include "colour_sensor.h"
+#include "infrared_sensor.h"
 
 int vl53l0xPing(vl53x* sensor) {
     int sensor_ping;
@@ -95,41 +104,45 @@ int vl53l0xTest(void) {
 	return EXIT_SUCCESS;
 }
 
-int vl53l0xExample(void) {
-    // Create a sensor struct
-	vl53x sensor;
-    if(vl53l0xPing(&sensor) == EXIT_FAILURE) return EXIT_FAILURE;
+// int vl53l0xExample(void) {
+//     double r_loc_x = 0;             // The X location of the robot, relative to the starting position
+//     double r_loc_y = 0;             // The Y location of the robot, relative to the starting position
+//     double r_angle = 0;             // The angle of the robot, relative to the starting position
 
-    int number_of_dist_measurements = 0;
-	int32_t iDistance;
-	int32_t prev_distance;
+//     // Create a sensor struct
+// 	vl53x sensor;
+//     if(vl53l0xPing(&sensor) == EXIT_FAILURE) return EXIT_FAILURE;
+
+//     int number_of_dist_measurements = 0;
+// 	int32_t iDistance;
+// 	int32_t prev_distance;
     
-	stepper_init();
-	stepper_reset();	
-	stepper_enable();
-	if(objectDetectionTwist360(&sensor)) {
-        stepper_set_speed(45000, 45000);
-        iDistance = tofReadDistance(&sensor);
-        do {
-            prev_distance = iDistance;
-            iDistance = tofReadDistance(&sensor);
-            printf("Distance = %dmm\n", iDistance);
-            stepper_steps(64, 64);
-            sleep_msec(50);
-            number_of_dist_measurements++;
-            int temp = flushIICChannel(&sensor, number_of_dist_measurements);
-            if (temp == EXIT_FAILURE) return EXIT_FAILURE;
-            if (temp == EXIT_SUCCESS) number_of_dist_measurements = 0;
-        } while(iDistance > 200 || prev_distance > 200);
+// 	stepper_init();
+// 	stepper_reset();	
+// 	stepper_enable();
+// 	if(objectDetectionTwist360(&sensor, &r_loc_x, &r_loc_y, &r_angle)) {
+//         stepper_set_speed(45000, 45000);
+//         iDistance = tofReadDistance(&sensor);
+//         do {
+//             prev_distance = iDistance;
+//             iDistance = tofReadDistance(&sensor);
+//             printf("Distance = %dmm\n", iDistance);
+//             stepper_steps(64, 64);
+//             sleep_msec(50);
+//             number_of_dist_measurements++;
+//             int temp = flushIICChannel(&sensor, number_of_dist_measurements);
+//             if (temp == EXIT_FAILURE) return EXIT_FAILURE;
+//             if (temp == EXIT_SUCCESS) number_of_dist_measurements = 0;
+//         } while(iDistance > 200 || prev_distance > 200);
 
-        int size = sizeDetection(&sensor);
+//         int size = sizeDetection(&sensor, &r_loc_x, &r_loc_y, &r_angle);
 
-        if (size == 1) printf("Block is of size 3x3x3!\n");
-        else if (size == 2) printf("Block is of size 6x6x6!\n");
-        else if (size == 3) printf("Mountain detected!\n");
-        else if (size == 0) printf("Error no size detected\n");
-    }
-	stepper_disable();
-	stepper_destroy();
-	return EXIT_SUCCESS;
-}
+//         if (size == 1) printf("Block is of size 3x3x3!\n");
+//         else if (size == 2) printf("Block is of size 6x6x6!\n");
+//         else if (size == 3) printf("Mountain detected!\n");
+//         else if (size == 0) printf("Error no size detected\n");
+//     }
+// 	stepper_disable();
+// 	stepper_destroy();
+// 	return EXIT_SUCCESS;
+// }
