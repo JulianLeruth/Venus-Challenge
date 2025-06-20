@@ -32,25 +32,28 @@ void __destroy__(tca9548a* mux, int succes) {
 
 int main(void) {
     /* =========================== Initization ============================ */
+    printf("\e[1;1H\e[2J");
     pynq_init();
     iic_init(IIC0);
     stepper_init();
     
-    double r_loc_x = 50;            // The X location of the robot, relative to the starting position.
-    double r_loc_y = 50;            // The Y location of the robot, relative to the starting position.
-    double r_angle = 0;             // The angle of the robot, relative to the starting position.
+    double r_loc_x = 100;                               // The X location of the robot, relative to the starting position.
+    double r_loc_y = 100;                               // The Y location of the robot, relative to the starting position.
+    double r_angle = 0;                                 // The angle of the robot, relative to the starting position.
     
-    int function;                   // A variable for checking function outputs.
+    int function;                                       // A variable for checking function outputs.
+
+
     /* ========================= Switchbox Set-up ========================= */
-    switchbox_set_pin(IO_AR_SCL, SWB_IIC0_SCL);
-    switchbox_set_pin(IO_AR_SDA, SWB_IIC0_SDA);
+    switchbox_set_pin(IO_AR_SCL, SWB_IIC0_SCL);         // I2C SCL Pin for the multiplexer.
+    switchbox_set_pin(IO_AR_SDA, SWB_IIC0_SDA);         // I2C SDA Pin for the multiplexer.
     
-    switchbox_set_pin(IO_AR5, SWB_GPIO);
-    switchbox_set_pin(IO_AR6, SWB_GPIO);
+    switchbox_set_pin(IO_AR5, SWB_GPIO);                // Pin for the right infrared sensor.
+    switchbox_set_pin(IO_AR6, SWB_GPIO);                // Pin for the left infrared sensor.
     
-    switchbox_set_pin(IO_AR4, SWB_GPIO);
+    switchbox_set_pin(IO_AR4, SWB_GPIO);                // Pin for the LEDS on the colour sensor.
     gpio_set_direction(IO_AR4, GPIO_DIR_OUTPUT);
-    gpio_set_level(IO_AR4, GPIO_LEVEL_LOW);
+    gpio_set_level(IO_AR4, GPIO_LEVEL_LOW);             // Turning the LEDS on the colour sensor off, by grounding the connection.
     
     /* ======================== Multiplexer Set-up ======================== */
     tca9548a mux;
@@ -62,7 +65,10 @@ int main(void) {
 
     /* ====================== Distance Sensor Set-up ====================== */
     vl53x dist_sensor;
-	if (tca9548a_switch_channel(&mux, MUX_CHANNEL_DIST_SENSOR_0) == EXIT_FAILURE) return EXIT_FAILURE;
+	if (tca9548a_switch_channel(&mux, MUX_CHANNEL_DIST_SENSOR_0) == EXIT_FAILURE) {
+        __destroy__(&mux, EXIT_FAILURE);
+        return EXIT_FAILURE;
+    }
     printf("\033[35m✔ Channel %d selected\033[0m — ready to talk to VL53L0X distance sensor on channel %d.\n", MUX_CHANNEL_DIST_SENSOR_0, MUX_CHANNEL_DIST_SENSOR_0);
     if (vl53l0xPing(&dist_sensor) == EXIT_FAILURE) {
         fprintf(stderr, "\033[31m✘ Failed to initialize VL53L0X distance sensor\n\n\033[0m");
@@ -72,7 +78,10 @@ int main(void) {
 
     /* ======================= Colour Sensor Set-up ======================= */
     tcs3472 colour_sensor = TCS3472_EMPTY;
-	if (tca9548a_switch_channel(&mux, MUX_CHANNEL_COLOUR_SENSOR_0) == EXIT_FAILURE) return EXIT_FAILURE;
+	if (tca9548a_switch_channel(&mux, MUX_CHANNEL_COLOUR_SENSOR_0) == EXIT_FAILURE) {
+        __destroy__(&mux, EXIT_FAILURE);
+        return EXIT_FAILURE;
+    }
     printf("\033[35m✔ Channel %d selected\033[0m — ready to talk to TCS3472 colour sensor on channel %d.\n", MUX_CHANNEL_COLOUR_SENSOR_0, MUX_CHANNEL_COLOUR_SENSOR_0);
     if (tcs3472Ping(&colour_sensor, INTEGRATION_TIME_MS) == EXIT_FAILURE) {
         fprintf(stderr, "\033[31m✘ Failed to initialize TCS3472 colour sensor\n\n\033[0m");
@@ -83,40 +92,50 @@ int main(void) {
 
 
 
-    
-    /* ======================== Movement Algoritme ======================== */
-    if (tca9548a_switch_channel(&mux, MUX_CHANNEL_DIST_SENSOR_0) == EXIT_FAILURE) return EXIT_FAILURE;
-    
-    location(r_loc_x, r_loc_y, r_angle);
-    function = objectDetectionTwist(&dist_sensor, 180, &r_angle, 500);
-    location(r_loc_x, r_loc_y, r_angle);
-    if (function == EXIT_ERROR) {
-        stepper_enable();
-        printf("Stepper enables\n");
-        straigth(50, 30000, &r_loc_x, &r_loc_y, &r_angle);
-        printf("Stepper going straight\n");
-        while(check_if_done() != 1) {
-            printf("");
-            if (IRborderDetection() != IR_NONE) {
-                stepper_disable();
-                break;
-            }
-        }
 
-        if (objectDetectionTwist(&dist_sensor, 360, &r_angle, 80) == EXIT_FAILURE) return EXIT_FAILURE;
-        location(r_loc_x, r_loc_y, r_angle);
+    /* ======================== Movement Algoritme ======================== */
+    if (tca9548a_switch_channel(&mux, MUX_CHANNEL_DIST_SENSOR_0) == EXIT_FAILURE) {
+        __destroy__(&mux, EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
-    else if (function == EXIT_SUCCESS) {
-        if (objectScan(&dist_sensor, &mux, &colour_sensor, &r_loc_x, &r_loc_y, &r_angle)
-        == EXIT_FAILURE) return EXIT_FAILURE;
-        // GO AROUND
+
+    locationPrint(r_loc_x, r_loc_y, r_angle);
+    function = objectDetectionTwist(&dist_sensor, 120, &r_angle, 400);
+    locationPrint(r_loc_x, r_loc_y, r_angle);
+    
+    // function = EXIT_ERROR;
+    if (function == EXIT_ERROR) {           // No object found, going straigth...
+        function = borderMovement(&r_loc_x, &r_loc_y, &r_angle);
+        if (function == BORDER) {
+            printf("Border detected\n");
+        }
+        else if (function == CLIFF) {
+            printf("Cliff detected\n");
+        }
     }
-    else if (function == EXIT_FAILURE) return EXIT_FAILURE;
+    else if (function == EXIT_SUCCESS) {    // Object found, approuching the object...
+        function = objectScan(&dist_sensor, &mux, &colour_sensor, &r_loc_x, &r_loc_y, &r_angle);
+        if (function == EXIT_FAILURE) {
+            __destroy__(&mux, EXIT_FAILURE);
+            return EXIT_FAILURE;
+        }
+        else if (function == EXIT_ERROR) {
+            twist(180, SPEED_TWIST_FAST, &r_angle);
+            waitTillDone();
+        }
+        else avoidBlock(&r_loc_x, &r_loc_y, &r_angle);
+    }
+    else if (function == EXIT_FAILURE) {
+        __destroy__(&mux, EXIT_FAILURE);
+        return EXIT_FAILURE;
+    }
+
     
-    
-    
-    
-    
+
+
+
+
+
     /* ====================== Destroy and exit code ======================= */
     __destroy__(&mux, EXIT_SUCCESS);
 
