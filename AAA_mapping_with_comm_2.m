@@ -7,7 +7,7 @@ resolution = 10; % cells per meter
 
 % Initialize Map
 map.grid = zeros(mapHeight * resolution, mapWidth * resolution);  % occupancy (0 = free, 1 = occupied)
-map.type = int(size(map.grid));  % 'tape', 'cube_red', 'cube_blue', 'obstacle'
+map.type = string(size(map.grid));  % 'tape', 'cube_red', 'cube_blue', 'obstacle'
 
 % Coordinate Conversion Function
 worldToGrid = @(x, y) deal(round(y * resolution), round(x * resolution));
