@@ -7,15 +7,14 @@ resolution = 10; % cells per meter
 
 % Initialize Map
 map.grid = zeros(mapHeight * resolution, mapWidth * resolution);  % occupancy (0 = free, 1 = occupied)
-map.type = string(size(map.grid));  % 'tape', 'cube_red', 'cube_blue', 'obstacle'
+map.type = strings(size(map.grid));  % type map (e.g., 'tape', 'cube_red', etc.)
 
 % Coordinate Conversion Function
 worldToGrid = @(x, y) deal(round(y * resolution), round(x * resolution));
 
 % MQTT Setup
-% IP of server
 brokerAddress = "tcp://mqtt.ics.ele.tue.nl:1883";
-% ID and password of each client
+
 client73 = mqttclient(brokerAddress, ...
     Username="robot_73_2", Password="CrodokHu", ...
     ClientID="mapper_73");
@@ -37,10 +36,9 @@ xlabel('X (grid cells)');
 ylabel('Y (grid cells)');
 
 % --- Legend Setup ---
-legendItems = [];  % to hold handles
-legendLabels = {}; % to hold labels
+legendItems = [];
+legendLabels = {};
 
-% Define mapping from types to display names and colors
 legendDefinitions = {
     'tape',            [0 0 0],            'Cliff';
     'cube_red_small',  'r',                'Red Cube';
@@ -51,49 +49,70 @@ legendDefinitions = {
     'mountain',        [0.6 0.6 0],        'Mountain';
 };
 
-% Create invisible patches to represent each type
 for i = 1:size(legendDefinitions,1)
     h = patch(NaN, NaN, legendDefinitions{i,2});
-    legendItems(end+1) = h; %#ok<SAGROW>
-    legendLabels{end+1} = legendDefinitions{i,3}; %#ok<SAGROW>
+    legendItems(end+1) = h;
+    legendLabels{end+1} = legendDefinitions{i,3};
 end
-
-% Display legend
 legend(legendItems, legendLabels, 'Location', 'eastoutside');
 
-sizeObjBig = 4;  offsetBig = sizeObjBig/2;
-sizeObjSmall = 2; offsetSmall = sizeObjSmall/2;
-sizeMountain = 8; offsetMountain = sizeMountain/2;
+% Object sizes
+sizeObjBig = 4;     offsetBig = sizeObjBig/2;
+sizeObjSmall = 2;   offsetSmall = sizeObjSmall/2;
+sizeMountain = 8;   offsetMountain = sizeMountain/2;
 
-% Real-time loop for map update
 disp('Listening');
 while true
-    % Read messages from both robots
     messages = [read(client73); read(client74)];
 
-    % Process each incoming message
-    % Process each incoming message
     for m = 1:height(messages)
         try
-            rawPayload = messages{m, 2};  % Assumes payload is in column 2
-            detection = jsondecode(rawPayload);  % Convert JSON string to struct
+            rawPayload = messages{m,2};
+            topic = messages{m,1};
+            detection = jsondecode(rawPayload);
 
-            x = detection.x;
-            y = detection.y;
-            objType = detection.type;
+            % Default values
+            x = NaN; y = NaN; i = NaN; j = NaN;
 
-            [i, j] = worldToGrid(x, y);
-            if i > 0 && j > 0 && i <= size(map.grid,1) && j <= size(map.grid,2)
-                map.grid(i, j) = 1;
-                map.type(i, j) = objType;
+            if isfield(detection, "type")
+                objType = detection.type;
+
+                if isfield(detection, "x") && isfield(detection, "y")
+                    x = detection.x;
+                    y = detection.y;
+                    [i, j] = worldToGrid(x, y);
+                end
+
+                % Handle regular object updates
+                if objType ~= "request"
+                    if i > 0 && j > 0 && i <= size(map.grid,1) && j <= size(map.grid,2)
+                        map.grid(i, j) = 1;
+                        map.type(i, j) = objType;
+                    end
+                else
+                    % Handle request: respond with occupancy status
+                    if ~isnan(i) && ~isnan(j) && i > 0 && j > 0 && ...
+                       i <= size(map.grid,1) && j <= size(map.grid,2)
+                        isOccupied = map.grid(i, j) == 1;
+                        valueToSend = uint8(isOccupied);
+                    else
+                        valueToSend = uint8(0);  % invalid coordinate, assume free
+                    end
+
+                    % Send back to the correct client
+                    if strcmp(topic, "/pynqbridge/73/send")
+                        publish(client73, "/pynqbridge/73/receive", valueToSend);
+                    elseif strcmp(topic, "/pynqbridge/74/send")
+                        publish(client74, "/pynqbridge/74/receive", valueToSend);
+                    end
+                end
             end
         catch err
-            %warning("Failed to parse message: %s", err.message);
+            %warning("Message processing failed: %s", err.message);
         end
     end
 
-
-    % Update the map
+    % Update visualization
     cla;
     imagesc(1 - flipud(map.grid));
     colormap(gray);
@@ -105,10 +124,8 @@ while true
             t = map.type(i,j);
             if t ~= ""
                 px = j;
-                py = size(map.grid,1) - i + 1;  % flip for image coordinates
+                py = size(map.grid,1) - i + 1;
 
-                % case for each type of detection (draws rectangles on top
-                % of occupied space/pixel)
                 switch t
                     case "tape"
                         rectangle('Position',[px - offsetSmall/2, py - offsetSmall/2, sizeObjSmall, sizeObjSmall], 'FaceColor', [0 0 0], 'EdgeColor', [0 0 0]);
@@ -133,28 +150,17 @@ while true
                     case "cube_white_big"
                         rectangle('Position',[px - offsetBig/2, py - offsetBig/2, sizeObjBig, sizeObjBig], 'FaceColor', [0.9, 0.9, 0.9], 'EdgeColor', [0.9, 0.9, 0.9]);
                     case "mountain"
-                        rectangle('Position',[px - offsetMountain/2, py - offsetMountain/2, sizeMountain, sizeMountain], 'FaceColor', [0.6 0.6 0], 'EdgeColor', [0.6 0.6 0]);
-                    case "request"
-                        [i, j] = worldToGrid(x, y);
-                        if i > 0 && j > 0 && i <= size(map.grid,1) && j <= size(map.grid,2)
-                            isOccupied = map.grid(i, j) == 1;
-                            valueToSend = uint8(isOccupied);
-                        else
-                            valueToSend = uint8(0);
-                        end
-
-                        if strcmp(messages{m,1}, "/pynqbridge/73/send")
-                            publish(client73, "/pynqbridge/73/receive", valueToSend);
-                        elseif strcmp(messages{m,1}, "/pynqbridge/74/send")
-                            publish(client74, "/pynqbridge/74/receive", valueToSend);
-                        end
+                        rectangle('Position',[px - offsetMountain/2, py - offsetMountain/2, sizeMountain, sizeMountain], 'FaceColor', [0.6, 0.6, 0], 'EdgeColor', [0.6, 0.6, 0]);
                 end
             end
         end
     end
 
     drawnow;
-    pause(0.2);  % Slight delay to avoid CPU overload
+    pause(0.2);  % Small delay to prevent CPU overload
 end
 
-% JSON Format: {"x": 2.1, "y": 3.4, "type": "tape"}
+% Example JSON to send from robot:
+% {"x": 2.1, "y": 3.4, "type": "tape"}
+% Or for request:
+% {"x": 5.5, "y": 6.0, "type": "request"}
