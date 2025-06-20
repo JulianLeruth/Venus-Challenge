@@ -51,7 +51,7 @@ int tcs3472Ping(tcs3472* sensor, int integration_time_ms) {
 	printf("TCS3472 device was successfully opened.\n");
 	fflush(NULL);
 
-	printf("Model ID - %#X\n", id);
+	printf("Model ID - %#X\n\n", id);
 
     return EXIT_SUCCESS;
 }
