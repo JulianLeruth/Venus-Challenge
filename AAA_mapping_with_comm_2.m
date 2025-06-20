@@ -134,6 +134,20 @@ while true
                         rectangle('Position',[px - offsetBig/2, py - offsetBig/2, sizeObjBig, sizeObjBig], 'FaceColor', [0.9, 0.9, 0.9], 'EdgeColor', [0.9, 0.9, 0.9]);
                     case "mountain"
                         rectangle('Position',[px - offsetMountain/2, py - offsetMountain/2, sizeMountain, sizeMountain], 'FaceColor', [0.6 0.6 0], 'EdgeColor', [0.6 0.6 0]);
+                    case "request"
+                        [i, j] = worldToGrid(x, y);
+                        if i > 0 && j > 0 && i <= size(map.grid,1) && j <= size(map.grid,2)
+                            isOccupied = map.grid(i, j) == 1;
+                            valueToSend = uint8(isOccupied);
+                        else
+                            valueToSend = uint8(0);
+                        end
+
+                        if strcmp(messages{m,1}, "/pynqbridge/73/send")
+                            publish(client73, "/pynqbridge/73/receive", valueToSend);
+                        elseif strcmp(messages{m,1}, "/pynqbridge/74/send")
+                            publish(client74, "/pynqbridge/74/receive", valueToSend);
+                        end
                 end
             end
         end
