@@ -692,4 +692,3 @@ int tofGetModel(vl53x *sensor, uint8_t *model, uint8_t *revision) {
 	return 0;
 
 } /* tofGetModel() */
-
