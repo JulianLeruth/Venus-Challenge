@@ -12,6 +12,8 @@
 #define BIG_BLOCK                               3
 #define MOUNTAIN                                4
 #define NO_BLOCK                                5
+#define BORDER                                  6
+#define CLIFF                                   7
 
 #define MUX_CHANNEL_DIST_SENSOR_0               0
 #define MUX_CHANNEL_DIST_SENSOR_1               1
@@ -26,7 +28,19 @@
 #define BLUE                                    3
 #define GREEN                                   4
 
+#define EXIT_SUCCESS                            0
+#define EXIT_FAILURE                            1
 #define EXIT_ERROR                              2
+
+#define SPEED_STRAIGHT_FAST                 20000
+#define SPEED_STRAIGHT_MED                  30000
+#define SPEED_STRAIGHT_SLOW                 45000
+#define SPEED_TWIST_FAST                    30000
+#define SPEED_TWIST_MED                     45000
+#define SPEED_TWIST_SLOW                    63000
+#define SPEED_TURN_FAST                     15000
+#define SPEED_TURN_SLOW                     35000
+
 // ===================== Basis Value Functions ====================== //
 /**
  * @brief The 'sizeOfArray' function calculates the size of the given arr.
@@ -82,8 +96,8 @@ extern double cosin(double angle);
 extern double sinus(double angle);
 
 
-// ===================== Localization Functions ===================== //
 
+// ===================== Localization Functions ===================== //
 /**
  * @brief The 'blockLocation' function calculates the location of the block
  *          based on the location of the robot and the distance between the two.
@@ -99,13 +113,24 @@ extern double sinus(double angle);
 extern void blockLocation(double r_loc_x, double r_loc_y, double r_angle, int32_t dist, double* b_loc_x, double* b_loc_y);
 
 /**
- * @brief The 'location' function prints the currect location of the robot.
+ * @brief The 'locationPrint' function prints the currect location of the robot.
  * 
  * @param r_loc_x   The X location of the robot.
  * @param r_loc_y   The Y location of the robot.
  * @param r_angle   The angle of the robot.
 */
-extern void location(double r_loc_x, double r_loc_y, double r_angle);
+extern void locationPrint(double r_loc_x, double r_loc_y, double r_angle);
+
+/**
+ * @brief The 'locationRecalculation' function calculates the location of the robot
+ *          based on unfinished steps on reset of the stepper motor.
+ * 
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void locationRecalculation(double* r_loc_x, double* r_loc_y, double* r_angle);
+
 
 
 // ==================== Movement check functions ==================== //
@@ -121,7 +146,8 @@ extern void waitTillDone(void);
  * 
  * @returns 0 if all steps are taken, 1 if the motor is not done yet.
 */
-extern int check_if_done(void);
+extern int checkIfDone(void);
+
 
 
 // ==================== Basic Movement Funtions ===================== //
@@ -135,7 +161,7 @@ extern int check_if_done(void);
  * @param r_loc_y   The Y location of the robot.
  * @param r_angle   The angle of the robot.
 */
-extern void straigth(int dist, uint16_t speed, double* r_loc_x, double* r_loc_y, double* r_angle);
+extern void straigth(double dist, uint16_t speed, double* r_loc_x, double* r_loc_y, double* r_angle);
 
 /**
  * @brief The 'twist' function makes the robot turn around it's own axes
@@ -145,11 +171,88 @@ extern void straigth(int dist, uint16_t speed, double* r_loc_x, double* r_loc_y,
  * @param speed     The speed of the turn.
  * @param r_angle   The angle of the robot.
 */
-extern void twist(int angle, uint16_t speed, double* r_angle);
+extern void twist(double angle, uint16_t speed, double* r_angle);
+
+/**
+ * @brief The 'turnRight' function makes the robot make a sharp turn to the right
+ *          for a given amount of degrees and a given speed.
+ * 
+ * @param angle     The angle of the turn.
+ * @param speed     The speed of the turn.
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void turnRight(double angle /* Defined in degrees */, uint16_t speed, double* r_loc_x, double* r_loc_y, double* r_angle);
+
+/**
+ * @brief The 'turnLeft' function makes the robot make a sharp turn to the left
+ *          for a given amount of degrees and a given speed.
+ * 
+ * @param angle     The angle of the turn.
+ * @param speed     The speed of the turn.
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void turnLeft(double angle /* Defined in degrees */, uint16_t speed, double* r_loc_x, double* r_loc_y, double* r_angle);
+
+/**
+ * @brief The 'straveRight' function makes the robot make a wide turn to the right
+ *          for a given amount of degrees and a given circle radius.
+ * 
+ * @param angle     The angle of the turn.
+ * @param dist      The radius of the turn.
+ * @param speed     The speed of the turn.
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void straveRight(double angle, double dist, uint16_t speed, double* r_loc_x, double* r_loc_y, double* r_angle);
+
+/**
+ * @brief The 'straveLeft' function makes the robot make a wide turn to the left
+ *          for a given amount of degrees and a given circle radius.
+ * 
+ * @param angle     The angle of the turn.
+ * @param dist      The radius of the turn.
+ * @param speed     The speed of the turn.
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void straveLeft(double angle, double dist, uint16_t speed, double* r_loc_x, double* r_loc_y, double* r_angle);
+
+/**
+ * @brief The 'avoidBorder' function is a movement function that avoids the border.
+ * 
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void avoidBorder(double* r_loc_x, double* r_loc_y, double* r_angle);
+
+/**
+ * @brief The 'avoidCliff' function is a movement function that avoids a cliff.
+ * 
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void avoidCliff(double* r_loc_x, double* r_loc_y, double* r_angle);
+
+/**
+ * @brief The 'avoidBlock' function is a movement function that avoids a block.
+ * 
+ * @param r_loc_x   The X location of the robot.
+ * @param r_loc_y   The Y location of the robot.
+ * @param r_angle   The angle of the robot.
+*/
+extern void avoidBlock(double* r_loc_x, double* r_loc_y, double* r_angle);
 
 
 
-// =========== Advanced Movement and detection functions ============ //
+// ======================= Detection functions ====================== //
 /**
  * @brief The 'sizeDetection' function measures the size of an object.
  * 
@@ -198,7 +301,35 @@ extern int objectAproach(vl53x* sensor, int max_dist, double* r_loc_x, double* r
  * @param r_loc_x       The X location of the robot.
  * @param r_loc_y       The Y location of the robot.
  * @param r_angle       The angle of the robot.
+ * @param b_size        The size of the object.
+ * @param b_colour      The colour of the block.
  * 
  * @returns EXIT_SUCCESS [0] on success, EXIT_FAILURE [1] on failure, EXIT_ERROR [2] on error.
 */
-extern int objectScan(vl53x* dist_sensor, tca9548a* mux, tcs3472* colour_sensor, double* r_loc_x, double* r_loc_y, double* r_angle);
+int objectScan(vl53x* dist_sensor, tca9548a* mux, tcs3472* colour_sensor, double* r_loc_x, double* r_loc_y, double* r_angle);
+
+
+
+// =================== Advanced movement functions ================== //
+
+/**
+ * @brief The 'borderMovement' function moves along the border
+ * 
+ * @param r_loc_x       The X location of the robot.
+ * @param r_loc_y       The Y location of the robot.
+ * @param r_angle       The angle of the robot.
+ * 
+ * @returns BORDER [6] on border detection, CLIFF [7] on cliff detection, EXIT_ERROR [2] on error.
+*/
+extern int borderMovement(double* r_loc_x, double* r_loc_y, double* r_angle);
+
+/**
+ * @brief The 'borderMovement' function moves along the border
+ * 
+ * @param r_loc_x       The X location of the robot.
+ * @param r_loc_y       The Y location of the robot.
+ * @param r_angle       The angle of the robot.
+ * 
+ * @returns BORDER [6] on border detection, CLIFF [7] on cliff detection.
+*/
+extern int borderDetection(double* r_loc_x, double* r_loc_y, double* r_angle);
