@@ -7,7 +7,7 @@ resolution = 10; % cells per meter
 
 % Initialize Map
 map.grid = zeros(mapHeight * resolution, mapWidth * resolution);  % occupancy (0 = free, 1 = occupied)
-map.type = strings(size(map.grid));  % 'tape', 'cube_red', 'cube_blue', 'obstacle'
+map.type = int(size(map.grid));  % 'tape', 'cube_red', 'cube_blue', 'obstacle'
 
 % Coordinate Conversion Function
 worldToGrid = @(x, y) deal(round(y * resolution), round(x * resolution));
@@ -46,6 +46,8 @@ legendDefinitions = {
     'cube_red_small',  'r',                'Red Cube';
     'cube_green_small','g',                'Green Cube';
     'cube_blue_small', 'b',                'Blue Cube';
+    'cube_white_small', [0.9, 0.9, 0.9],   'White Cube';
+    'cube_black_small', [0.1, 0.1, 0.1],   'Black Cube';
     'mountain',        [0.6 0.6 0],        'Mountain';
 };
 
@@ -122,6 +124,14 @@ while true
                         rectangle('Position',[px - offsetSmall/2, py - offsetSmall/2, sizeObjSmall, sizeObjSmall], 'FaceColor', 'b', 'EdgeColor', 'b');
                     case "cube_blue_big"
                         rectangle('Position',[px - offsetBig/2, py - offsetBig/2, sizeObjBig, sizeObjBig], 'FaceColor', 'b', 'EdgeColor', 'b');
+                    case "cube_black_small"
+                        rectangle('Position',[px - offsetSmall/2, py - offsetSmall/2, sizeObjSmall, sizeObjSmall], 'FaceColor', [0.1, 0.1, 0.1], 'EdgeColor', [0.1, 0.1, 0.1]);
+                    case "cube_black_big"
+                        rectangle('Position',[px - offsetBig/2, py - offsetBig/2, sizeObjBig, sizeObjBig], 'FaceColor', [0.1, 0.1, 0.1], 'EdgeColor', [0.1, 0.1, 0.1]);
+                    case "cube_white_small"
+                        rectangle('Position',[px - offsetSmall/2, py - offsetSmall/2, sizeObjSmall, sizeObjSmall], 'FaceColor', [0.9, 0.9, 0.9], 'EdgeColor', [0.9, 0.9, 0.9]);
+                    case "cube_white_big"
+                        rectangle('Position',[px - offsetBig/2, py - offsetBig/2, sizeObjBig, sizeObjBig], 'FaceColor', [0.9, 0.9, 0.9], 'EdgeColor', [0.9, 0.9, 0.9]);
                     case "mountain"
                         rectangle('Position',[px - offsetMountain/2, py - offsetMountain/2, sizeMountain, sizeMountain], 'FaceColor', [0.6 0.6 0], 'EdgeColor', [0.6 0.6 0]);
                 end
